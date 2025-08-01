@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Receipt - Black Rock Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Dark background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+        }
+        .receipt-container {
+            background-color: #2d3748; /* Darker gray for the card */
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 28rem; /* Sleek width */
+            color: #e2e8f0; /* Light text color */
+            margin-left: auto;
+            margin-right: auto;
+        }
+        @media (min-width: 768px) {
+            .receipt-container {
+                padding: 3rem;
+            }
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .header h2 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: #48bb78; /* Green for success */
+        }
+        .header p {
+            font-size: 1rem;
+            color: #cbd5e0;
+        }
+        .detail-section {
+            background-color: #4a5568; /* Slightly lighter gray for sections */
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.4rem 0;
+            border-bottom: 1px dashed #667eea; /* Dashed line for receipt feel */
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .detail-label {
+            font-weight: 500;
+            color: #cbd5e0;
+            flex-shrink: 0;
+            margin-right: 0.5rem;
+        }
+        .detail-value {
+            font-weight: 600;
+            color: #e2e8f0;
+            text-align: right;
+            word-break: break-all;
+        }
+        .footer-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        .btn {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            background-color: #4299e1;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border: none;
+        }
+        .btn:hover {
+            background-color: #3182ce;
+        }
+        .btn-secondary {
+            background-color: #4a5568;
+        }
+        .btn-secondary:hover {
+            background-color: #2d3748;
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt-container">
+        <div class="header">
+            <h2>Transaction Receipt</h2>
+            <p class="text-sm">Black Rock Payment Terminal</p>
+            <p class="text-xs mt-1">{{ timestamp }}</p>
+            <p class="text-lg font-bold mt-2">CUSTOMER COPY</p>
+        </div>
+
+        <div class="detail-section">
+            <div class="detail-row">
+                <span class="detail-label">Transaction ID:</span>
+                <span class="detail-value">{{ txn_id }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Card Type:</span>
+                <span class="detail-value">{{ card_type }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Card Number:</span>
+                <span class="detail-value">**** **** **** {{ pan }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Protocol:</span>
+                <span class="detail-value">{{ protocol_version }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Auth Code:</span>
+                <span class="detail-value">{{ auth_code }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">ISO Field 39:</span>
+                <span class="detail-value">{{ field39 }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Amount:</span>
+                <span class="detail-value">{{ amount }} {{ currency }}</span>
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <h3 class="text-lg font-semibold mb-3 text-left">Payout Details</h3>
+            <div class="detail-row">
+                <span class="detail-label">Payout Type:</span>
+                <span class="detail-value">{{ payout }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Recipient Wallet:</span>
+                <span class="detail-value">{{ wallet[:10] }}...{{ wallet[-4:] }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">ARN / Txn Hash:</span>
+                <span class="detail-value">{{ arn[:10] }}...{{ arn[-4:] }}</span>
+            </div>
+        </div>
+
+        <div class="footer-buttons">
+            <button type="button" class="btn" onclick="window.print()">Print This Receipt</button>
+            <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ url_for('index') }}'">New Transaction</button>
+            <a href="{{ url_for('transaction_history_screen') }}" class="btn btn-secondary">View Transaction History</a>
+        </div>
+    </div>
+</body>
+</html>

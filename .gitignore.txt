@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Flask
+instance/
+.flaskenv
+
+# Environment variables
+.env
+
+# Sensitive data (like your password file)
+password.json
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+
+# Test/Debug Files
+*.log
+*.sqlite3
+*.db

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Transaction - Black Rock Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Dark background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+        }
+        .form-container {
+            background-color: #2d3748; /* Darker gray for the card */
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 36rem; /* Wider for more inputs */
+            color: #e2e8f0; /* Light text color */
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #cbd5e0; /* Lighter gray for labels */
+        }
+        .form-input, .form-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #4a5568; /* Darker border */
+            border-radius: 0.5rem;
+            background-color: #4a5568; /* Input background */
+            color: #e2e8f0; /* Input text color */
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus, .form-select:focus {
+            border-color: #63b3ed; /* Blue focus border */
+        }
+        .grid-cols-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        .btn {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            background-color: #4299e1; /* Blue button */
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border: none;
+        }
+        .btn:hover {
+            background-color: #3182ce; /* Darker blue on hover */
+        }
+        .flash-message {
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border-radius: 0.5rem;
+            text-align: left;
+            font-weight: 500;
+        }
+        .flash-error {
+            background-color: #fed7d7;
+            color: #c53030;
+            border: 1px solid #c53030;
+        }
+        .flash-info {
+            background-color: #bee3f8;
+            color: #2b6cb0;
+            border: 1px solid #2b6cb0;
+        }
+        .flash-success {
+            background-color: #c6f6d5;
+            color: #2f855a;
+            border: 1px solid #2f855a;
+        }
+        .card-number-input {
+            letter-spacing: 1px; /* Add some spacing for better readability */
+        }
+        .auth-code-input {
+            text-align: center;
+            font-size: 1.25rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2 class="text-3xl font-bold mb-6 text-center">New Transaction</h2>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="mb-4">
+                    {% for category, message in messages %}
+                        <li class="flash-message flash-{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('process_transaction') }}" method="POST">
+            <!-- Amount and Currency Section -->
+            <div class="form-group">
+                <label for="amount" class="form-label">Amount</label>
+                <div class="grid-cols-2">
+                    <input type="number" id="amount" name="amount" placeholder="e.g., 10000000" class="form-input" value="10000000" min="1" required>
+                    <select id="currency" name="currency" class="form-select">
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Payout Method Section -->
+            <div class="form-group">
+                <label for="payout_method" class="form-label">Crypto Payout Method</label>
+                <select id="payout_method" name="payout_method" class="form-select mb-2" onchange="updateWalletDisplay()">
+                    <option value="ERC20">ERC20</option>
+                    <option value="TRC20">TRC20</option>
+                </select>
+                <input type="text" id="custom_wallet" name="custom_wallet" placeholder="Enter Custom Wallet Address (Optional)" class="form-input">
+                <p id="default_wallet_hint" class="text-sm text-gray-400 mt-1"></p>
+            </div>
+
+            <!-- Card Details Section -->
+            <div class="form-group">
+                <label for="pan" class="form-label">Card Number</label>
+                <input type="text" id="pan" name="pan" placeholder="Up to 19 digits" class="form-input card-number-input" maxlength="19" required>
+            </div>
+
+            <div class="grid-cols-2">
+                <div class="form-group">
+                    <label for="expiry" class="form-label">Expiry (MM/YY)</label>
+                    <input type="text" id="expiry" name="expiry" placeholder="MM/YY" class="form-input" maxlength="5" required onkeyup="formatExpiry(this)">
+                </div>
+                <div class="form-group">
+                    <label for="cvv" class="form-label">CVV/CVC</label>
+                    <input type="text" id="cvv" name="cvv" placeholder="3-4 digits" class="form-input" maxlength="4" required>
+                </div>
+            </div>
+
+            <!-- Protocol Selection Section -->
+            <div class="form-group">
+                <label for="protocol" class="form-label">Protocol Selection</label>
+                <select id="protocol" name="protocol" class="form-select" onchange="updateAuthCodeLength()">
+                    {% for protocol_name, code_len in protocols.items() %}
+                        <option value="{{ protocol_name }}" data-code-length="{{ code_len }}">{{ protocol_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Authorization Code Section -->
+            <div class="form-group">
+                <label for="auth_code" class="form-label">Authorization Code (<span id="auth_code_length_display">4</span> digits)</label>
+                <input type="text" id="auth_code" name="auth_code" placeholder="Enter code" class="form-input auth-code-input" maxlength="4" required>
+            </div>
+
+            <button type="submit" class="btn">Authorize Payment</button>
+        </form>
+
+        <div class="mt-6 text-center">
+            <a href="{{ url_for('logout') }}" class="text-blue-400 hover:underline">Logout</a>
+        </div>
+    </div>
+
+    <script>
+        // Define default wallet addresses (these would ideally come from Flask context)
+        const DEFAULT_WALLETS = {
+            'ERC20': '0xDefaultERC20WalletAddressForTesting',
+            'TRC20': 'TDefaultTRC20WalletAddressForTesting'
+        };
+
+        // Function to format expiry date as MM/YY
+        function formatExpiry(input) {
+            let value = input.value.replace(/\D/g, ''); // Remove non-digits
+            if (value.length > 2) {
+                value = value.substring(0, 2) + '/' + value.substring(2, 4);
+            }
+            input.value = value;
+        }
+
+        // Function to update wallet display based on payout method
+        function updateWalletDisplay() {
+            const payoutMethod = document.getElementById('payout_method').value;
+            const customWalletInput = document.getElementById('custom_wallet');
+            const defaultWalletHint = document.getElementById('default_wallet_hint');
+
+            // Show/hide custom wallet input
+            customWalletInput.style.display = 'block'; // Always show custom input for now
+
+            // Update default wallet hint
+            if (DEFAULT_WALLETS[payoutMethod]) {
+                defaultWalletHint.textContent = `Default: ${DEFAULT_WALLETS[payoutMethod]}`;
+            } else {
+                defaultWalletHint.textContent = '';
+            }
+
+            // Clear custom wallet input if it's currently showing a default value (optional, but good UX)
+            // if (customWalletInput.value === DEFAULT_WALLETS['ERC20'] || customWalletInput.value === DEFAULT_WALLETS['TRC20']) {
+            //     customWalletInput.value = '';
+            // }
+        }
+
+        // Function to update authorization code input length based on selected protocol
+        function updateAuthCodeLength() {
+            const protocolSelect = document.getElementById('protocol');
+            const selectedOption = protocolSelect.options[protocolSelect.selectedIndex];
+            const codeLength = selectedOption.getAttribute('data-code-length');
+
+            const authCodeInput = document.getElementById('auth_code');
+            const authCodeLengthDisplay = document.getElementById('auth_code_length_display');
+
+            authCodeInput.maxLength = codeLength;
+            authCodeInput.placeholder = `Enter ${codeLength}-digit code`;
+            authCodeLengthDisplay.textContent = codeLength;
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateWalletDisplay(); // Set initial state for wallet display
+            updateAuthCodeLength(); // Set initial state for auth code length
+        });
+    </script>
+</body>
+</html>

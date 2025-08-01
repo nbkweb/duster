@@ -1,0 +1,49 @@
+    # This file is for deploying your Flask application to Render using Blueprints.
+    # It defines a web service and its environment variables.
+
+    services:
+      - type: web
+        name: blackrock-payment-terminal
+        env: python
+        buildCommand: pip install -r requirements.txt
+        startCommand: python app.py
+        envVars:
+          # Flask Secret Key (CRITICAL FOR SESSION SECURITY)
+          # Generate a strong, random string for this in production:
+          # Example: python -c 'import os; print(os.urandom(24))'
+          - key: SESSION_SECRET
+            generateValue: true # Render will generate a strong random string for you
+
+          # Blockchain API Keys and Sender Private Keys (HIGHLY SENSITIVE)
+          # Replace 'YOUR_INFURA_PROJECT_ID_HERE' etc. with your actual values.
+          # For production, these should be securely managed (e.g., in Render's dashboard as secrets).
+          - key: INFURA_PROJECT_ID
+            value: YOUR_INFURA_PROJECT_ID_HERE
+          - key: TRONGRID_API_KEY
+            value: YOUR_TRONGRID_API_KEY_HERE
+          - key: SENDER_ERC20_PRIVATE_KEY
+            value: 0x1111111111111111111111111111111111111111111111111111111111111111 # Replace with your actual key
+          - key: SENDER_TRC20_PRIVATE_KEY
+            value: 1111111111111111111111111111111111111111111111111111111111111111 # Replace with your actual key
+
+          # Default Wallet Addresses (if different from production_config.py defaults)
+          # - key: DEFAULT_ERC20_WALLET
+          #   value: 0xYourDefaultERC20MerchantWalletAddress
+          # - key: DEFAULT_TRC20_WALLET
+          #   value: TYourDefaultTRC20MerchantWalletAddress
+
+          # Exchange Rates (for fee calculation)
+          # In production, consider fetching these dynamically from an oracle.
+          - key: ETH_TO_USDT_RATE
+            value: "2000.0" # Example rate, adjust as needed
+          - key: TRX_TO_USDT_RATE
+            value: "0.1"    # Example rate, adjust as needed
+
+          # Flask Debug Mode (set to 'false' for production)
+          - key: FLASK_DEBUG
+            value: "false"
+
+          # Port (Render automatically sets this, usually not needed to define explicitly)
+          # - key: PORT
+          #   value: "5000"
+    

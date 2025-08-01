@@ -1,0 +1,6 @@
+Flask
+pyotp
+qrcode
+web3
+tronpy
+    

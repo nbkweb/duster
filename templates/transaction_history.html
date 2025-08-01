@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction History - Black Rock Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Dark background */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to top for scrolling content */
+            min-height: 100vh;
+            margin: 0;
+            padding: 2rem 1rem; /* More padding top/bottom */
+        }
+        .history-container {
+            background-color: #2d3748; /* Darker gray for the card */
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 60rem; /* Wider for history table */
+            color: #e2e8f0; /* Light text color */
+            margin-left: auto;
+            margin-right: auto;
+            overflow-x: auto; /* Enable horizontal scrolling for table on small screens */
+        }
+        @media (min-width: 768px) {
+            .history-container {
+                padding: 3rem;
+            }
+        }
+        h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            text-align: center;
+            color: #63b3ed; /* Blue for headings */
+        }
+        .table-wrapper {
+            overflow-x: auto; /* Ensures table is scrollable if content overflows */
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 700px; /* Minimum width for the table to prevent squishing */
+        }
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #4a5568; /* Darker border for table rows */
+        }
+        th {
+            background-color: #4a5568; /* Header background */
+            font-weight: 600;
+            color: #cbd5e0;
+            white-space: nowrap; /* Prevent header text from wrapping */
+        }
+        tbody tr:hover {
+            background-color: #4a5568; /* Hover effect for rows */
+        }
+        .status-completed {
+            color: #48bb78; /* Green */
+            font-weight: 600;
+        }
+        .status-declined, .status-payout-failed {
+            color: #e53e3e; /* Red */
+            font-weight: 600;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            background-color: #4299e1;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border: none;
+            display: inline-block; /* For side-by-side buttons */
+            margin-top: 2rem;
+        }
+        .btn:hover {
+            background-color: #3182ce;
+        }
+        .btn-secondary {
+            background-color: #4a5568;
+        }
+        .btn-secondary:hover {
+            background-color: #2d3748;
+        }
+        .flash-message {
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border-radius: 0.5rem;
+            text-align: left;
+            font-weight: 500;
+        }
+        .flash-error {
+            background-color: #fed7d7;
+            color: #c53030;
+            border: 1px solid #c53030;
+        }
+        .flash-info {
+            background-color: #bee3f8;
+            color: #2b6cb0;
+            border: 1px solid #2b6cb0;
+        }
+        .flash-success {
+            background-color: #c6f6d5;
+            color: #2f855a;
+            border: 1px solid #2f855a;
+        }
+    </style>
+</head>
+<body>
+    <div class="history-container">
+        <h2>Transaction History</h2>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="mb-4">
+                    {% for category, message in messages %}
+                        <li class="flash-message flash-{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+
+        {% if transactions %}
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date/Time</th>
+                            <th>Txn ID</th>
+                            <th>Card</th>
+                            <th>Amount</th>
+                            <th>Protocol</th>
+                            <th>Payout Type</th>
+                            <th>Status</th>
+                            <th>Payout Status</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for txn in transactions %}
+                            <tr>
+                                <td>{{ txn.timestamp }}</td>
+                                <td>{{ txn.transaction_id }}</td>
+                                <td>{{ txn.card_number_masked }}</td>
+                                <td>{{ "%.2f" | format(txn.amount) }} {{ txn.currency }}</td>
+                                <td>{{ txn.protocol_type.split(' ')[-2].replace('(', '') }}</td> {# Extracts e.g., 101.1 from "POS Terminal -101.1 (4-digit approval)" #}
+                                <td>{{ txn.crypto_network_type }}</td>
+                                <td class="status-{{ txn.status | lower | replace(' ', '-') }}">
+                                    {{ txn.status }}
+                                </td>
+                                <td class="status-{{ txn.payout_status | lower | replace(' ', '-') }}">
+                                    {{ txn.payout_status if txn.payout_status else 'N/A' }}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('success_screen', transaction_id=txn.transaction_id) }}" class="text-blue-400 hover:underline">View</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-gray-300 text-center text-lg mt-8">No transactions recorded yet.</p>
+        {% endif %}
+
+        <div class="flex justify-center gap-4">
+            <a href="{{ url_for('index') }}" class="btn">New Transaction</a>
+            <button type="button" class="btn btn-secondary" onclick="exportHistory()">Export History (CSV)</button>
+        </div>
+    </div>
+
+    <script>
+        function exportHistory() {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            const table = document.querySelector('table');
+            const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent).join(',');
+            csvContent += headers + "\r\n";
+
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const rowData = Array.from(row.querySelectorAll('td')).map(td => {
+                    // Get text content, handling potential links or extra spaces
+                    let text = td.textContent.trim();
+                    // For the 'Details' column, we just want to ignore the link text
+                    if (td.querySelector('a')) {
+                        return ''; // Or you could extract the transaction ID if needed
+                    }
+                    // Escape commas and wrap in quotes if necessary
+                    return text.includes(',') || text.includes('\n') ? `"${text.replace(/"/g, '""')}"` : text;
+                }).join(',');
+                csvContent += rowData + "\r\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "transaction_history.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
