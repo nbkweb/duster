@@ -22,13 +22,13 @@ def get_production_config():
         # Sender Wallet Private Keys (HIGHLY SENSITIVE - NEVER HARDCODE IN PRODUCTION!)
         # These values MUST be set as environment variables in your deployment.
         # The default values here should be the generic placeholders.
-        'SENDER_ERC20_PRIVATE_KEY': os.environ.get('SENDER_ERC20_PRIVATE_KEY', os.environ.get('SENDER_ERC20_PRIVATE_KEY', '0x1111111111111111111111111111111111111111111111111111111111111111')), # Placeholder
-        'SENDER_TRC20_PRIVATE_KEY': os.environ.get('SENDER_TRC20_PRIVATE_KEY', os.environ.get('SENDER_TRC20_PRIVATE_KEY', '1111111111111111111111111111111111111111111111111111111111111111')), # Placeholder
+        'SENDER_ERC20_PRIVATE_KEY': os.environ.get('SENDER_ERC20_PRIVATE_KEY', os.environ.get('ERC20_PRIVATE_KEY', '0x1111111111111111111111111111111111111111111111111111111111111111')), # Placeholder
+        'SENDER_TRC20_PRIVATE_KEY': os.environ.get('SENDER_TRC20_PRIVATE_KEY', os.environ.get('TRC20_PRIVATE_KEY', '1111111111111111111111111111111111111111111111111111111111111111')), # Placeholder
 
         # ISO 8583 Server Details - Aligned with EXTERNAL_ISO_HOST/PORT
-        'ISO_SERVER_HOST': os.environ.get('EXTERNAL_ISO_HOST', '66.185.176.0'),
-        'ISO_SERVER_PORT': int(os.environ.get('EXTERNAL_ISO_PORT', 20)),
-        'ISO_TIMEOUT': int(os.environ.get('ISO_TIMEOUT', 120)),
+        'ISO_SERVER_HOST': os.environ.get('EXTERNAL_ISO_HOST', '66.185.176.0'), # Placeholder for your universal ISO server
+        'ISO_SERVER_PORT': int(os.environ.get('EXTERNAL_ISO_PORT', 20)), # Placeholder for your universal ISO server port
+        'ISO_TIMEOUT': int(os.environ.get('ISO_TIMEOUT', 120)), # Timeout for ISO server communication
 
         # Daily transaction limit for the terminal
         'DAILY_LIMIT_PER_TERMINAL': int(os.environ.get('DAILY_LIMIT_PER_TERMINAL', 10000000)), # Default 10M EUR/USD
