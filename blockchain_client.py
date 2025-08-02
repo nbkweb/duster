@@ -1,11 +1,11 @@
 import logging
 from web3 import Web3
+from web3.middleware import geth_poa_middleware # Required for PoA networks like BSC, Polygon
 from tronpy import Tron
 from tronpy.keys import PrivateKey as TronPrivateKey
 from tronpy.providers import HTTPProvider as TronHTTPProvider
 # Removed explicit import for TransactionRejectedError to avoid ImportError.
 # We will now rely on general Exception handling for transaction failures.
-
 
 # Import production config for API keys, private keys, and exchange rates
 from production_config import get_production_config
@@ -132,13 +132,14 @@ class BlockchainClient:
                 'transaction_hash': 'N/A',
                 'message': 'ERC20 client not connected or sender address not derived. Check logs for init errors.'
             }
-        if not self.sender_erc20_private_key or self.sender_erc20_private_key == self.config['SENDER_ERC20_PRIVATE_KEY']:
+        # Check if the private key is still the placeholder
+        if self.sender_erc20_private_key == get_production_config()['SENDER_ERC20_PRIVATE_KEY']:
             return {
                 'status': 'Failed',
                 'payout_amount_usdt': 0.0,
                 'simulated_gas_fee_usdt': 0.0,
                 'transaction_hash': 'N/A',
-                'message': 'ERC20 sender private key is missing or is a placeholder. Cannot send real transaction.'
+                'message': 'ERC20 sender private key is a placeholder. Cannot send real transaction.'
             }
 
         try:
@@ -241,13 +242,14 @@ class BlockchainClient:
                 'transaction_hash': 'N/A',
                 'message': 'TRC20 client not initialized or sender address not derived. Check logs for init errors.'
             }
-        if not self.sender_trc20_private_key or self.sender_trc20_private_key == self.config['SENDER_TRC20_PRIVATE_KEY']:
+        # Check if the private key is still the placeholder
+        if self.sender_trc20_private_key == get_production_config()['SENDER_TRC20_PRIVATE_KEY']:
             return {
                 'status': 'Failed',
                 'payout_amount_usdt': 0.0,
                 'simulated_gas_fee_usdt': 0.0,
                 'transaction_hash': 'N/A',
-                'message': 'TRC20 sender private key is missing or is a placeholder. Cannot send real transaction.'
+                'message': 'TRC20 sender private key is a placeholder. Cannot send real transaction.'
             }
 
         try:
@@ -288,7 +290,8 @@ class BlockchainClient:
             # Calculate actual TRX burned for energy
             # 1 Energy Point = 420 SUN (0.00042 TRX) - This rate can change.
             trx_burned_for_energy = (actual_energy_used * 420) / 1_000_000 if actual_energy_used else 0
-            # A rough estimate for bandwidth cost if not covered by free bandwidth
+            # Add a small amount for bandwidth if not covered by free bandwidth
+            # (Very rough estimate, actual bandwidth cost depends on transaction size)
             simulated_bandwidth_cost_trx = 0.5
 
             total_trx_fee = trx_burned_for_energy + simulated_bandwidth_cost_trx
