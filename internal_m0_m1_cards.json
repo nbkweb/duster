@@ -1,15 +1,15 @@
 {
-  "4114755393849011": {
-    "expiry": "0926",
-    "cvv": "363",
-    "auth": "1942",
+  "4375070114233721": {
+    "expiry": "0129",
+    "cvv": "177",
+    "auth": "7920",
     "type": "POS Terminal -101.1 (4-digit approval)"
   },
-  "4000123412341234": {
-    "expiry": "1126",
+  "5312600057440561": {
+    "expiry": "0827",
     "cvv": "123",
-    "auth": "4021",
-    "type": "POS Terminal -101.1 (4-digit approval)"
+    "auth": "728531",
+    "type": "POS Terminal -201.3 (6-digit approval)"
   },
   "4117459374038454": {
     "expiry": "1026",
