@@ -3,4 +3,4 @@ pyotp==2.9.0
 qrcode==7.4.2
 web3==6.11.1
 tronpy==0.6.0
-pyiso8583==1.1.0 # Added for ISO 8583 communication
+pyiso8583                  # Added for ISO 8583 communication ==1.1.0
