@@ -3,8 +3,8 @@ from web3 import Web3
 from tronpy import Tron
 from tronpy.keys import PrivateKey as TronPrivateKey
 from tronpy.providers import HTTPProvider as TronHTTPProvider
-# Corrected import: TransactionRejectedError is often directly from tronpy
-from tronpy import TransactionRejectedError
+# Removed specific import for TransactionRejectedError to avoid ImportError.
+# We will catch a more general Exception in the send method.
 
 
 # Import production config for API keys, private keys, and exchange rates
@@ -244,7 +244,7 @@ class BlockchainClient:
                 # Sign the transaction
                 signed_txn = built_txn.sign(TronPrivateKey(bytes.fromhex(self.sender_trc20_private_key)))
 
-            except TransactionRejectedError as tre:
+            except Exception as tre: # Changed from TransactionRejectedError to a general Exception
                 logger.error(f"TRC20 transaction estimation/build failed: {tre}")
                 return {
                     'status': 'Failed',
@@ -295,4 +295,3 @@ class BlockchainClient:
                 'transaction_hash': 'N/A',
                 'message': f"TRC20 USDT payout failed: {e}"
             }
-             
