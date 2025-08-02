@@ -30,7 +30,7 @@ import base64 # Used for encoding/decoding TOTP secrets
 app = Flask(__name__)
 # IMPORTANT: In a real production environment, app.secret_key MUST be a long,
 # randomly generated string stored securely (e.g., in an environment variable).
-app.secret_key = os.environ.get("SESSION_SECRET", "blackrock_terminal_secret_2025_DEFAULT_DO_NOT_USE_IN_PROD")
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "blackrock_terminal_secret_2025")
 app.permanent_session_lifetime = timedelta(hours=8) # Sessions last for 8 hours
 
 logging.basicConfig(level=logging.INFO)
