@@ -3,9 +3,8 @@ from web3 import Web3
 from tronpy import Tron
 from tronpy.keys import PrivateKey as TronPrivateKey
 from tronpy.providers import HTTPProvider as TronHTTPProvider
-# This import for TransactionRejectedError is often problematic depending on tronpy version.
-# We will keep it and rely on the general Exception handling in the send method if it fails.
-from tronpy.exceptions import TransactionRejectedError
+# Removed explicit import for TransactionRejectedError to avoid ImportError.
+# We will now rely on general Exception handling for transaction failures.
 
 
 # Import production config for API keys, private keys, and exchange rates
