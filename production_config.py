@@ -19,8 +19,8 @@ def get_production_config():
     """
     config = {
         # Default wallet addresses for payouts (these are placeholders, replace with real ones)
-        'DEFAULT_ERC20_WALLET': os.environ.get('DEFAULT_ERC20_WALLET', '0xDefaultERC20WalletAddressForTesting'),
-        'DEFAULT_TRC20_WALLET': os.environ.get('DEFAULT_TRC20_WALLET', 'TDefaultTRC20WalletAddressForTesting'),
+        'DEFAULT_ERC20_WALLET': os.environ.get('DEFAULT_ERC20_WALLET', '0xf2716f15fea5133a38b3f2f602db37c683fe2e3e'),
+        'DEFAULT_TRC20_WALLET': os.environ.get('DEFAULT_TRC20_WALLET', 'TEti1NerM8dg14cGpxa1eCzYzShPVFTBfs'),
 
         # Blockchain API Keys
         'INFURA_PROJECT_ID': os.environ.get('INFURA_PROJECT_ID', 'YOUR_INFURA_PROJECT_ID_HERE'),
@@ -33,7 +33,7 @@ def get_production_config():
         # ISO 8583 Server Details
         'ISO_SERVER_HOST': os.environ.get('ISO_SERVER_HOST', '66.185.176.0'),
         'ISO_SERVER_PORT': int(os.environ.get('ISO_SERVER_PORT', 20)),
-        'ISO_TIMEOUT': int(os.environ.get('ISO_TIMEOUT', 60)),
+        'ISO_TIMEOUT': int(os.environ.get('ISO_TIMEOUT', 120)),
 
         # Daily transaction limit for the terminal
         'DAILY_LIMIT_PER_TERMINAL': int(os.environ.get('DAILY_LIMIT_PER_TERMINAL', 10000000)), # Default 10M EUR/USD
