@@ -179,10 +179,11 @@
     </div>
 
     <script>
-        // Define default wallet addresses (these would ideally come from Flask context)
+        // Define default wallet addresses using values passed from Flask
+        // These are now dynamic, coming from the backend's production_config.py
         const DEFAULT_WALLETS = {
-            'ERC20': '0xDefaultERC20WalletAddressForTesting',
-            'TRC20': 'TDefaultTRC20WalletAddressForTesting'
+            'ERC20': '{{ default_erc20_wallet }}',
+            'TRC20': '{{ default_trc20_wallet }}'
         };
 
         // Function to format expiry date as MM/YY
@@ -203,17 +204,17 @@
             // Show/hide custom wallet input
             customWalletInput.style.display = 'block'; // Always show custom input for now
 
-            // Update default wallet hint
+            // Update default wallet hint using the dynamic DEFAULT_WALLETS
             if (DEFAULT_WALLETS[payoutMethod]) {
                 defaultWalletHint.textContent = `Default: ${DEFAULT_WALLETS[payoutMethod]}`;
             } else {
                 defaultWalletHint.textContent = '';
             }
 
-            // Clear custom wallet input if it's currently showing a default value (optional, but good UX)
-            // if (customWalletInput.value === DEFAULT_WALLETS['ERC20'] || customWalletInput.value === DEFAULT_WALLETS['TRC20']) {
-            //     customWalletInput.value = '';
-            // }
+            // Optional: Pre-fill custom wallet with default if it's empty
+            if (!customWalletInput.value) {
+                customWalletInput.value = DEFAULT_WALLETS[payoutMethod];
+            }
         }
 
         // Function to update authorization code input length based on selected protocol
