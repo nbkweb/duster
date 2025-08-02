@@ -3,5 +3,4 @@ pyotp
 qrcode
 web3
 tronpy
-pyiso8583
 python-dotenv
