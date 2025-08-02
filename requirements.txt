@@ -1,6 +1,7 @@
 Flask==2.3.2
 pyotp==2.9.0
 qrcode==7.4.2
-web3==6.11.1
+web3==7.12.1
 tronpy==0.6.0
-pyiso8583                  # Added for ISO 8583 communication ==1.1.0
+pyiso8583==1.1.0 # Added for ISO 8583 communication
+python-dotenv==1.1.1 # Added this line
