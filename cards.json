@@ -1,0 +1,92 @@
+{
+  "4114755393849011": {
+    "expiry": "0926",
+    "cvv": "363",
+    "auth": "1942",
+    "type": "POS Terminal -101.1 (4-digit approval)"
+  },
+  "4000123412341234": {
+    "expiry": "1126",
+    "cvv": "123",
+    "auth": "4021",
+    "type": "POS Terminal -101.1 (4-digit approval)"
+  },
+  "4117459374038454": {
+    "expiry": "1026",
+    "cvv": "258",
+    "auth": "384726",
+    "type": "POS Terminal -101.4 (6-digit approval)"
+  },
+  "4123456789012345": {
+    "expiry": "0826",
+    "cvv": "852",
+    "auth": "495128",
+    "type": "POS Terminal -101.4 (6-digit approval)"
+  },
+  "5454957994741066": {
+    "expiry": "1126",
+    "cvv": "746",
+    "auth": "627192",
+    "type": "POS Terminal -101.6 (Pre-authorization)"
+  },
+  "6011000990131077": {
+    "expiry": "0825",
+    "cvv": "330",
+    "auth": "8765",
+    "type": "POS Terminal -101.7 (4-digit approval)"
+  },
+  "3782822463101088": {
+    "expiry": "1226",
+    "cvv": "1059",
+    "auth": "0000",
+    "type": "POS Terminal -101.8 (PIN-LESS transaction)"
+  },
+  "3530760473041099": {
+    "expiry": "0326",
+    "cvv": "244",
+    "auth": "712398",
+    "type": "POS Terminal -201.1 (6-digit approval)"
+  },
+  "4114938274651920": {
+    "expiry": "0926",
+    "cvv": "463",
+    "auth": "3127",
+    "type": "POS Terminal -101.1 (4-digit approval)"
+  },
+  "4001948263728191": {
+    "expiry": "1026",
+    "cvv": "291",
+    "auth": "574802",
+    "type": "POS Terminal -101.4 (6-digit approval)"
+  },
+  "6011329481720394": {
+    "expiry": "0825",
+    "cvv": "310",
+    "auth": "8891",
+    "type": "POS Terminal -101.7 (4-digit approval)"
+  },
+  "378282246310106": {
+    "expiry": "1226",
+    "cvv": "1439",
+    "auth": "0000",
+    "type": "POS Terminal -101.8 (PIN-LESS transaction)"
+  },
+  "3531540982734612": {
+    "expiry": "0326",
+    "cvv": "284",
+    "auth": "914728",
+    "type": "POS Terminal -201.1 (6-digit approval)"
+  },
+  "5456038291736482": {
+    "expiry": "1126",
+    "cvv": "762",
+    "auth": "695321",
+    "type": "POS Terminal -201.3 (6-digit approval)"
+  },
+  "4118729301748291": {
+    "expiry": "1026",
+    "cvv": "249",
+    "auth": "417263",
+    "type": "POS Terminal -201.5 (6-digit approval)"
+  }
+}
