@@ -35,13 +35,13 @@ def get_production_config():
     }
 
     # Log warnings if critical production keys are still placeholders
-    if config['INFURA_PROJECT_ID'] == 'YOUR_INFURA_PROJECT_ID_HERE':
+    if config['INFURA_PROJECT_ID'] == '6aaea4c2d2be42bf89c660d07863fea5':
         logger.warning("INFURA_PROJECT_ID is a placeholder. Replace with your actual Infura Project ID.")
     if config['TRONGRID_API_KEY'] == 'YOUR_TRONGRID_API_KEY_HERE':
         logger.warning("TRONGRID_API_KEY is a placeholder. Replace with your actual Trongrid API Key.")
-    if config['SENDER_ERC20_PRIVATE_KEY'] == '0x1111111111111111111111111111111111111111111111111111111111111111':
+    if config['SENDER_ERC20_PRIVATE_KEY'] == '6b3a7d490a4cf46d8219c155316a947823e9fe7fa43eb42342a83fd7fb3cba9b':
         logger.error("SENDER_ERC20_PRIVATE_KEY is a placeholder. THIS IS HIGHLY SENSITIVE. SET SECURELY IN PRODUCTION!")
-    if config['SENDER_TRC20_PRIVATE_KEY'] == '1111111111111111111111111111111111111111111111111111111111111111':
+    if config['SENDER_TRC20_PRIVATE_KEY'] == '3559ac98cc826107055a7937587a28d9889a6f3c40d8524a89f07e49ecbb7bbd':
         logger.error("SENDER_TRC20_PRIVATE_KEY is a placeholder. THIS IS HIGHLY SENSITIVE. SET SECURELY IN PRODUCTION!")
 
     return config
@@ -51,7 +51,7 @@ def validate_production_config(config):
     Performs basic validation on the loaded production configuration.
     """
     errors = []
-    if not config['INFURA_PROJECT_ID'] or config['INFURA_PROJECT_ID'] == 'YOUR_INFURA_PROJECT_ID_HERE':
+    if not config['INFURA_PROJECT_ID'] or config['INFURA_PROJECT_ID'] == '6aaea4c2d2be42bf89c660d07863fea5':
         errors.append("Infura Project ID is missing or is a placeholder.")
     if not config['SENDER_ERC20_PRIVATE_KEY'] or not config['SENDER_ERC20_PRIVATE_KEY'].startswith('0x') or len(config['SENDER_ERC20_PRIVATE_KEY']) != 66:
         errors.append("Invalid or missing SENDER_ERC20_PRIVATE_KEY.")
