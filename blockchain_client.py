@@ -17,11 +17,11 @@ class BlockchainClient:
         self.config = get_production_config()
 
         self.infura_project_id = self.config['INFURA_PROJECT_ID']
-        self.sender_eth_private_key = self.config['ETH_PRIVATE_KEY']
+        self.sender_erc20_private_key = self.config['ERC20_PRIVATE_KEY']
         self.sender_erc20_address = None
 
         self.trongrid_api_key = self.config['TRONGRID_API_KEY']
-        self.sender_trc20_private_key = self.config['TRON_PRIVATE_KEY']
+        self.sender_trc20_private_key = self.config['TRC20_PRIVATE_KEY']
         self.sender_trc20_address = None
 
         self.eth_to_usdt_rate = self.config['ETH_TO_USDT_RATE']
