@@ -22,8 +22,8 @@ def get_production_config():
         # Sender Wallet Private Keys (HIGHLY SENSITIVE - NEVER HARDCODE IN PRODUCTION!)
         # These values MUST be set as environment variables in your deployment.
         # The default values here should be the generic placeholders.
-        'SENDER_ERC20_PRIVATE_KEY': os.environ.get('SENDER_ERC20_PRIVATE_KEY', os.environ.get('ERC20_PRIVATE_KEY', '0x1111111111111111111111111111111111111111111111111111111111111111')), # Placeholder
-        'SENDER_TRC20_PRIVATE_KEY': os.environ.get('SENDER_TRC20_PRIVATE_KEY', os.environ.get('TRC20_PRIVATE_KEY', '1111111111111111111111111111111111111111111111111111111111111111')), # Placeholder
+        'SENDER_ERC20_PRIVATE_KEY': os.environ.get('SENDER_ERC20_PRIVATE_KEY', os.environ.get('SENDER_ERC20_PRIVATE_KEY', '0x1111111111111111111111111111111111111111111111111111111111111111')), # Placeholder
+        'SENDER_TRC20_PRIVATE_KEY': os.environ.get('SENDER_TRC20_PRIVATE_KEY', os.environ.get('SENDER_TRC20_PRIVATE_KEY', '1111111111111111111111111111111111111111111111111111111111111111')), # Placeholder
 
         # ISO 8583 Server Details - Aligned with EXTERNAL_ISO_HOST/PORT
         'ISO_SERVER_HOST': os.environ.get('EXTERNAL_ISO_HOST', '66.185.176.0'),
