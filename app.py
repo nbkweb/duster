@@ -2,19 +2,17 @@ from flask import Flask, render_template, request, redirect, session, url_for, f
 import random, logging, qrcode, io, os, json, hashlib, re
 from datetime import datetime, date, timedelta
 from functools import wraps
-from dotenv import load_dotenv # Ensure this is at the very top
-
-# Load environment variables from .env file (for local development)
-load_dotenv()
 
 # For TOTP (Time-based One-Time Password)
 import pyotp
 import base64 # Used for encoding/decoding TOTP secrets
 
-# Import the REAL BlockchainClient and production config
-# These should be in separate files: blockchain_client.py and production_config.py
+# Import the real BlockchainClient and production config
 from blockchain_client import BlockchainClient
 from production_config import get_production_config, validate_production_config, get_wallet_config
+
+# Import the new ISO 8583 Client
+from iso_client import IsoClient
 
 app = Flask(__name__)
 # IMPORTANT: In a real production environment, app.secret_key MUST be a long,
@@ -29,18 +27,34 @@ logger = logging.getLogger(__name__)
 USERNAME = "ADMIN" # As specified by user
 PASSWORD_FILE = "password.json" # Stores hashed password and TOTP secret
 TOTP_ISSUER_NAME = "Black Rock Terminal"
-INTERNAL_M0_M1_CARDS_FILE = "internal_m0_m1_cards.json" # Path to your internal M0/M1 cards JSON file
 
-# --- Global variable to hold INTERNAL_M0_M1_CARDS data ---
-# This will be loaded at startup. Balances are NOT tracked by this app.
-INTERNAL_M0_M1_CARDS = {}
+# --- Define PROTOCOLS ---
+# This dictionary defines the expected authorization code length for each protocol.
+# This is still used for frontend validation and display.
+PROTOCOLS = {
+    "POS Terminal -101.1 (4-digit approval)": 4,
+    "POS Terminal -101.4 (6-digit approval)": 6,
+    "POS Terminal -101.6 (Pre-authorization)": 6,
+    "POS Terminal -101.7 (4-digit approval)": 4,
+    "POS Terminal -101.8 (PIN-LESS transaction)": 4,
+    "POS Terminal -201.1 (6-digit approval)": 6,
+    "POS Terminal -201.3 (6-digit approval)": 6,
+    "POS Terminal -201.5 (6-digit approval)": 6
+}
 
 # --- Initialize the REAL BlockchainClient ---
-# This will use the API keys and private keys loaded from production_config.py
 blockchain_client = BlockchainClient()
 
+# --- Initialize the ISO 8583 Client ---
+# Load ISO server details from production config
+prod_config = get_production_config()
+iso_server_host = prod_config['ISO_SERVER_HOST']
+iso_server_port = prod_config['ISO_SERVER_PORT']
+iso_timeout = prod_config['ISO_TIMEOUT']
+iso_client = IsoClient(iso_server_host, iso_server_port, iso_timeout)
+
 # Validate production configuration on startup
-if not validate_production_config(get_production_config()):
+if not validate_production_config(prod_config):
     logger.error("Production configuration validation failed. Please review production_config.py and environment variables.")
     # In a real app, you might want to exit or disable payout functionality here.
 
@@ -106,114 +120,6 @@ def verify_totp(secret, otp_code):
     totp = pyotp.TOTP(secret)
     return totp.verify(otp_code)
 
-# --- Load INTERNAL_M0_M1_CARDS from JSON file (no balance logic) ---
-def load_internal_m0_m1_cards():
-    """Loads internal M0/M1 card data from a JSON file."""
-    global INTERNAL_M0_M1_CARDS # Declare intent to modify the global variable
-    if not os.path.exists(INTERNAL_M0_M1_CARDS_FILE):
-        logger.error(f"Error: {INTERNAL_M0_M1_CARDS_FILE} not found. Internal M0/M1 card data will be empty.")
-        INTERNAL_M0_M1_CARDS = {}
-        return
-    try:
-        with open(INTERNAL_M0_M1_CARDS_FILE, 'r') as f:
-            INTERNAL_M0_M1_CARDS = json.load(f)
-            logger.info(f"Loaded {len(INTERNAL_M0_M1_CARDS)} internal M0/M1 cards from {INTERNAL_M0_M1_CARDS_FILE}.")
-    except json.JSONDecodeError as e:
-        logger.error(f"Error decoding {INTERNAL_M0_M1_CARDS_FILE}: {e}")
-        INTERNAL_M0_M1_CARDS = {}
-
-# Load cards on app startup
-load_internal_m0_m1_cards()
-
-# --- In-memory Mock Database for Transactions (NO PERSISTENCE) ---
-# This dictionary will store transaction data.
-# This data WILL BE LOST when the application restarts (e.g., on Render redeploy).
-MOCK_TRANSACTIONS_DB = {}
-
-def generate_transaction_id():
-    """Generates a unique transaction ID."""
-    return f"TXN{datetime.now().strftime('%Y%m%d%H%M%S')}{random.randint(1000, 9999)}"
-
-def get_transactions_collection_ref():
-    """
-    Returns a mock collection reference that interacts with the in-memory dictionary.
-    This simulates a collection for transactions.
-    """
-    class MockDocumentRef:
-        def __init__(self, doc_id):
-            self.doc_id = doc_id
-
-        def set(self, data):
-            MOCK_TRANSACTIONS_DB[self.doc_id] = data
-            logger.info(f"MOCK DB: Stored document {self.doc_id}")
-
-        def get(self):
-            class MockDocSnapshot:
-                def __init__(self, exists, data):
-                    self.exists = exists
-                    self._data = data
-                def to_dict(self):
-                    return self._data
-            data = MOCK_TRANSACTIONS_DB.get(self.doc_id)
-            return MockDocSnapshot(data is not None, data)
-
-    class MockCollectionRef:
-        def document(self, doc_id):
-            return MockDocumentRef(doc_id)
-
-        def stream(self):
-            # Simulate streaming by returning all values
-            sorted_transactions = sorted(
-                MOCK_TRANSACTIONS_DB.values(),
-                key=lambda x: x.get('timestamp', ''),
-                reverse=True
-            )
-            return sorted_transactions
-
-        # Add mock methods for order_by and limit for compatibility with history screen
-        def order_by(self, field, direction):
-            return self # Chaining not fully implemented, just returns self
-
-        def limit(self, count):
-            return self # Chaining not fully implemented, just returns self
-
-    return MockCollectionRef()
-
-def add_transaction_to_mock_db(transaction_data):
-    """Adds a new transaction record to the in-memory mock database."""
-    get_transactions_collection_ref().document(transaction_data['transaction_id']).set(transaction_data)
-    logger.info(f"Transaction {transaction_data['transaction_id']} added to MOCK DB.")
-
-def get_transaction_details_from_mock_db(transaction_id):
-    """Retrieves a single transaction's details from the in-memory mock database."""
-    doc = get_transactions_collection_ref().document(transaction_id).get()
-    if doc.exists:
-        return doc.to_dict()
-    return None
-
-# --- PROTOCOLS and FIELD_39_RESPONSES (from your original app.py, moved here for clarity) ---
-PROTOCOLS = {
-    "POS Terminal -101.1 (4-digit approval)": 4,
-    "POS Terminal -101.4 (6-digit approval)": 6,
-    "POS Terminal -101.6 (Pre-authorization)": 6,
-    "POS Terminal -101.7 (4-digit approval)": 4,
-    "POS Terminal -101.8 (PIN-LESS transaction)": 4,
-    "POS Terminal -201.1 (6-digit approval)": 6,
-    "POS Terminal -201.3 (6-digit approval)": 6,
-    "POS Terminal -201.5 (6-digit approval)": 6
-}
-
-FIELD_39_RESPONSES = {
-    "05": "Do Not Honor",
-    "14": "Terminal unable to resolve encrypted session state. Contact card issuer",
-    "54": "Expired Card",
-    "82": "Invalid CVV",
-    "91": "Issuer Inoperative",
-    "92": "Invalid Terminal Protocol",
-    "99": "ISO Server Communication Error" # Custom code for socket errors
-}
-
-
 # --- Flask Routes ---
 
 @app.before_request
@@ -224,8 +130,16 @@ def make_session_permanent():
 def index():
     """Root URL redirects to the consolidated transaction form if logged in, otherwise to login."""
     if session.get('logged_in'):
-        # Pass the PROTOCOLS dictionary to the template
-        return render_template('transaction_form.html', protocols=PROTOCOLS)
+        # Get default wallet addresses from production_config
+        config = get_production_config()
+        default_erc20_wallet = config.get('DEFAULT_ERC20_WALLET', 'N/A')
+        default_trc20_wallet = config.get('DEFAULT_TRC20_WALLET', 'N/A')
+
+        # Pass the PROTOCOLS dictionary and default wallets to the template
+        return render_template('transaction_form.html',
+                               protocols=PROTOCOLS,
+                               default_erc20_wallet=default_erc20_wallet,
+                               default_trc20_wallet=default_trc20_wallet)
     return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -398,13 +312,101 @@ def reset_password():
     return render_template('reset_password.html')
 
 
+# --- In-memory Mock Database for Transactions ---
+# This dictionary will store transaction data.
+# In a real production environment, this would be replaced by a persistent database (e.g., PostgreSQL, MongoDB, or Firestore).
+MOCK_TRANSACTIONS_DB = {}
+
+def get_transactions_collection_ref():
+    """
+    Returns a mock collection reference that interacts with the in-memory dictionary.
+    This simulates Firestore's document-based structure for transactions.
+    """
+    class MockDocumentRef:
+        def __init__(self, doc_id):
+            self.doc_id = doc_id
+
+        def set(self, data):
+            MOCK_TRANSACTIONS_DB[self.doc_id] = data
+            logger.info(f"MOCK DB: Stored document {self.doc_id}")
+
+        def get(self):
+            class MockDocSnapshot:
+                def __init__(self, exists, data):
+                    self.exists = exists
+                    self._data = data
+                def to_dict(self):
+                    return self._data
+            data = MOCK_TRANSACTIONS_DB.get(self.doc_id)
+            return MockDocSnapshot(data is not None, data)
+
+    class MockCollectionRef:
+        def document(self, doc_id):
+            return MockDocumentRef(doc_id)
+
+        def stream(self):
+            # Simulate streaming by returning all values
+            # In a real Firestore, this would be more complex with cursors etc.
+            # For simplicity, we'll sort by timestamp here for history.
+            sorted_transactions = sorted(
+                MOCK_TRANSACTIONS_DB.values(),
+                key=lambda x: x.get('timestamp', ''), # Sort by timestamp string
+                reverse=True
+            )
+            return sorted_transactions
+
+        # Add mock methods for order_by and limit for compatibility with history screen
+        def order_by(self, field, direction):
+            return self # Chaining not fully implemented, just returns self
+
+        def limit(self, count):
+            return self # Chaining not fully implemented, just returns self
+
+    return MockCollectionRef()
+
+def get_transaction_details_from_firestore(transaction_id):
+    """Retrieves transaction details from the mock in-memory database."""
+    doc = get_transactions_collection_ref().document(transaction_id).get()
+    if doc.exists:
+        return doc.to_dict()
+    return None
+
+# Helper function to generate a unique transaction ID
+def generate_transaction_id():
+    """Generates a unique transaction ID based on timestamp and random number."""
+    return datetime.now().strftime("%Y%m%d%H%M%S") + str(random.randint(1000, 9999))
+
+# Function to validate card number using Luhn algorithm
+def validate_card_number(card_number):
+    """
+    Validates a credit card number using the Luhn algorithm.
+    Removes spaces and hyphens before validation.
+    """
+    card_number = card_number.replace(" ", "").replace("-", "")
+    if not card_number.isdigit():
+        return False
+
+    digits = [int(d) for d in card_number]
+    checksum = 0
+    num_digits = len(digits)
+    parity = num_digits % 2
+
+    for i, digit in enumerate(digits):
+        if i % 2 == parity:
+            digit *= 2
+            if digit > 9:
+                digit -= 9
+        checksum += digit
+    return checksum % 10 == 0
+
+
 # --- New Consolidated Transaction Processing Route ---
 @app.route('/process_transaction', methods=['POST'])
 @login_required
 def process_transaction():
     """
     Handles the consolidated transaction form submission.
-    Validates inputs against INTERNAL_M0_M1_CARDS, and triggers crypto payout.
+    Validates inputs, communicates with ISO 8583 server, and triggers crypto payout.
     """
     # 1. Extract form data
     amount_str = request.form.get('amount', '').replace(',', '').strip()
@@ -415,12 +417,12 @@ def process_transaction():
     exp = request.form.get('expiry', '').replace("/", "")
     cvv = request.form.get('cvv')
     protocol = request.form.get('protocol')
-    auth_code_entered = request.form.get('auth_code')
+    auth_code_entered = request.form.get('auth_code') # This will be the auth code from ISO response
 
-    # 2. Input Validations
+    # 2. Input Validations (existing validations remain)
     if not currency or currency not in ['USD', 'EUR']:
         flash("Please select a valid currency.", "error")
-        return redirect(url_for('index')) # Redirect back to the form
+        return redirect(url_for('index'))
 
     try:
         amount_float = float(amount_str)
@@ -440,16 +442,12 @@ def process_transaction():
             return redirect(url_for('index'))
     elif payout_method == 'TRC20':
         wallet = custom_wallet if custom_wallet else get_production_config()['DEFAULT_TRC20_WALLET']
-        if not (wallet.startswith('T') and len(wallet) >= 34): # TRC20 addresses vary in length, usually 34
+        if not (wallet.startswith('T') and len(wallet) >= 34):
             flash('Invalid TRC-20 wallet address format.', 'error')
             return redirect(url_for('index'))
     else:
         flash('Please select a payout method.', 'error')
         return redirect(url_for('index'))
-
-    # Basic card number format validation (Luhn algorithm not implemented)
-    def validate_card_number(card_num):
-        return len(card_num) >= 13 and len(card_num) <= 19 and card_num.isdigit()
 
     if not validate_card_number(pan):
         flash('Invalid card number format.', 'error')
@@ -467,12 +465,12 @@ def process_transaction():
         flash('Invalid protocol selected.', 'error')
         return redirect(url_for('index'))
 
-    expected_auth_length = PROTOCOLS[protocol]
-    if len(auth_code_entered) != expected_auth_length or not auth_code_entered.isdigit():
-        flash(f"Authorization code must be {expected_auth_length} digits and numeric.", "error")
-        return redirect(url_for('index'))
+    # The auth_code_entered from the form is now just an input, not directly used for ISO response logic
+    # The actual auth code will come from the ISO server response.
+    # We will remove the length validation for auth_code_entered here, as the ISO server will provide it.
+    # If the user still enters it, we can store it, but it's not for validation against a dummy card.
 
-    # Infer card type for receipt
+    # Infer card type for receipt (still useful for display)
     card_type = "UNKNOWN"
     if pan.startswith("4"):
         card_type = "VISA"
@@ -490,50 +488,101 @@ def process_transaction():
     session['payout_type'] = payout_method
     session['wallet'] = wallet
     session['protocol'] = protocol
-    session['auth_code'] = auth_code_entered # Store entered auth code for potential later use
+    # session['auth_code'] = auth_code_entered # This will be overwritten by ISO response
     session['card_type'] = card_type
 
-    # 3. Internal M0/M1 Card Validation (against INTERNAL_M0_M1_CARDS)
+    # --- ISO 8583 Communication (REAL IMPLEMENTATION) ---
     iso_response = {}
     transaction_status = "Declined"
-    message = "Transaction declined by issuer."
-    field39_resp = "05" # Default 'Do Not Honor'
+    message = "ISO Server Communication Error" # Default error message
+    field39_resp = "99" # Custom code for socket errors (e.g., connection/timeout)
+    iso_auth_code = None # Initialize ISO authorization code
 
-    # Retrieve card data from the globally loaded INTERNAL_M0_M1_CARDS
-    card_data = INTERNAL_M0_M1_CARDS.get(pan)
+    try:
+        # Connect to ISO server
+        if not iso_client.connect():
+            raise ConnectionError("Failed to connect to ISO 8583 server.")
 
-    if card_data:
-        if exp != card_data['expiry']:
-            message = FIELD_39_RESPONSES["54"]
-            field39_resp = "54"
-        elif cvv != card_data['cvv']:
-            message = FIELD_39_RESPONSES["82"]
-            field39_resp = "82"
-        elif protocol != card_data['type']: # Check if protocol matches card's type
-            message = FIELD_39_RESPONSES["92"]
-            field39_resp = "92"
-        elif auth_code_entered != card_data['auth']:
-            message = FIELD_39_RESPONSES["05"] # Incorrect auth code
-            field39_resp = "05"
+        # Prepare ISO 8583 message fields for Authorization Request (MTI 1100)
+        # IMPORTANT: This is a GENERIC ISO 8583 message structure.
+        # You MUST customize Field 3 (Processing Code), Field 22 (POS Entry Mode),
+        # Field 25 (POS Condition Code), Field 41 (Terminal ID), and potentially
+        # add Field 35 (Track 2 Data) or Field 55 (EMV Data) based on your
+        # specific ISO 8583 server's requirements and the payment terminal's capabilities.
+        # Consult your ISO 8583 server's specification document for precise field usage.
+        current_time_str = datetime.now().strftime("%H%M%S")
+        current_date_str = datetime.now().strftime("%m%d")
+        stan = generate_transaction_id()[-6:] # Systems Trace Audit Number
+
+        iso_message_data = {
+            0: '1100', # MTI: Authorization Request
+            2: pan, # Primary Account Number (PAN)
+            3: '000000', # Processing Code (e.g., 000000 for goods/services) - CUSTOMIZE THIS
+            4: str(int(amount_float * 100)).zfill(12), # Amount, Transaction (in cents, 12 digits, right-justified, zero-filled)
+            7: datetime.now().strftime("%m%d%H%M%S"), # Transmission Date & Time (MMDDhhmmss)
+            11: stan, # Systems Trace Audit Number (STAN)
+            12: current_time_str, # Local Transaction Time (hhmmss)
+            13: current_date_str, # Local Transaction Date (MMDD)
+            14: exp, # Expiration Date (YYMM) - Note: ISO 8583 typically uses YYMM, form uses MM/YY
+            22: '010', # POS Entry Mode (e.g., 010 for Manual Keyed Entry) - CUSTOMIZE THIS
+            25: '00', # POS Condition Code (e.g., 00 for Normal) - CUSTOMIZE THIS
+            41: 'YOUR_TERM_ID', # Terminal ID - CUSTOMIZE THIS with your actual terminal ID
+            49: currency, # Transaction Currency Code (e.g., USD, EUR)
+            # Add Field 35 (Track 2 Data) if you are reading magstripe data
+            # Add Field 55 (ICC Data) if you are processing EMV chip cards
+            # Example for Field 35 (Track 2):
+            # 35: f"{pan}={exp}{cvv}...", # This would require more sophisticated parsing
+        }
+        logger.info(f"Sending ISO 8583 request to {iso_server_host}:{iso_server_port} for PAN: {pan[-4:]}")
+        iso_raw_response = iso_client.send_iso_message(iso_message_data)
+
+        if iso_raw_response:
+            response_code = iso_raw_response.get(39) # Field 39: Response Code
+            iso_auth_id_response = iso_raw_response.get(38) # Field 38: Authorization ID Response
+
+            if response_code == '00': # '00' typically means Approved
+                transaction_status = "Approved"
+                message = "Payment authorized by ISO server."
+                field39_resp = "00"
+                iso_auth_code = iso_auth_id_response if iso_auth_id_response else auth_code_entered # Use real auth code or fallback to entered
+            else:
+                transaction_status = "Declined"
+                # Map ISO Field 39 response code to a more user-friendly message
+                # You will need to maintain a comprehensive mapping for all possible Field 39 codes
+                message = f"Transaction declined. Response Code: {response_code}"
+                # Example of mapping specific codes to messages (you'll expand this based on your ISO spec)
+                if response_code == '05': message = "Do Not Honor"
+                elif response_code == '14': message = "Invalid Card Number" # Illustrative, actual reason depends on server
+                elif response_code == '54': message = "Expired Card"
+                elif response_code == '91': message = "Issuer Inoperative"
+                # Add more mappings as per your ISO server's specification
+                field39_resp = response_code # Use the actual response code from ISO server
+            logger.info(f"ISO 8583 response received. Status: {transaction_status}, Field 39: {field39_resp}")
         else:
-            # All card details are valid. This is the "debiting" step (successful internal validation).
-            transaction_status = "Approved"
-            message = "Payment authorized."
-            field39_resp = "00" # Approved
-            iso_response['auth_code'] = card_data['auth'] # Use the auth code from card data
-            logger.info(f"Internal M0/M1 Card {pan} successfully validated. Proceeding to payout.")
+            message = "ISO Server did not return a valid response or communication failed."
+            field39_resp = "99" # Custom error code for no valid ISO response
+            transaction_status = "Declined"
 
-    else:
-        # Card not found in our internal INTERNAL_M0_M1_CARDS list
-        message = FIELD_39_RESPONSES["14"] # Terminal unable to resolve / Card not found
-        field39_resp = "14"
+    except ConnectionError as e:
+        logger.error(f"ISO Connection Error: {e}")
+        message = "Failed to connect to ISO Server. Check host, port, or network."
+        field39_resp = "99"
+        transaction_status = "Declined"
+    except Exception as e:
+        logger.error(f"An unexpected error occurred during ISO 8583 communication: {e}")
+        message = f"Internal ISO Communication Error: {e}"
+        field39_resp = "99"
+        transaction_status = "Declined"
+    finally:
+        iso_client.close() # Ensure socket is closed after each transaction attempt
 
-    # Set final ISO response based on internal validation
     iso_response['status'] = transaction_status
     iso_response['message'] = message
     iso_response['field39'] = field39_resp
+    iso_response['auth_code'] = iso_auth_code # Store the authorization code from ISO response
+    # --- END ISO 8583 Communication ---
 
-    # 4. Prepare Transaction Details for Mock DB
+    # 4. Prepare Transaction Details for Mock DB and Session
     current_transaction_details = {
         'transaction_id': generate_transaction_id(),
         'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -543,30 +592,27 @@ def process_transaction():
         'protocol_type': protocol,
         'crypto_network_type': payout_method,
         'status': iso_response['status'],
-        'auth_code_required': True if iso_response['status'] == 'Approved' else False, # Assume auth code always required if approved
+        'auth_code_required': True if iso_response['status'] == 'Approved' else False,
         'payout_status': None,
         'crypto_payout_amount': 0.0,
         'simulated_gas_fee': 0.0,
         'crypto_address': wallet, # Store the actual wallet used
         'iso_field39': iso_response['field39'],
         'message': iso_response['message'],
-        'auth_code': iso_response.get('auth_code') # Store the auth code returned by ISO (from card data)
+        'auth_code': iso_response.get('auth_code', 'N/A') # Use the auth code from ISO response
     }
 
-    # Store transaction in Mock In-Memory DB (NO PERSISTENCE)
+    # Store transaction in Mock In-Memory DB (still useful for history/receipts)
     get_transactions_collection_ref().document(current_transaction_details['transaction_id']).set(current_transaction_details)
     logger.info(f"Mock DB: Stored initial transaction {current_transaction_details['transaction_id']}")
 
 
-    # 5. Handle Redirection based on Internal Validation Response
+    # 5. Handle Redirection based on ISO Response
     if iso_response['status'] == 'Approved':
-        # Trigger real crypto payout immediately if internally approved
-        recipient_wallet_info = get_wallet_config(current_transaction_details['crypto_network_type'])
-        recipient_crypto_address = current_transaction_details['crypto_address'] # Use the wallet from form/default
-
+        # Trigger crypto payout immediately if approved by ISO
         crypto_payout_result = blockchain_client.send_usdt(
             network=current_transaction_details['crypto_network_type'].lower(),
-            to_address=recipient_crypto_address,
+            to_address=current_transaction_details['crypto_address'], # Use the wallet from form/default
             amount_usd=current_transaction_details['amount']
         )
 
@@ -578,10 +624,10 @@ def process_transaction():
 
         # Update overall transaction status based on payout
         if crypto_payout_result.get('status') == 'Success':
-            current_transaction_details['status'] = 'Completed' # Final status if payout succeeded
+            current_transaction_details['status'] = 'Completed'
             flash("Payment Approved and Payout Initiated!", "success")
         else:
-            current_transaction_details['status'] = 'Payout Failed' # Final status if payout failed
+            current_transaction_details['status'] = 'Payout Failed'
             flash(f"Payment Approved, but Payout Failed: {current_transaction_details['message']}", "warning")
 
         # Update transaction in Mock DB after payout attempt
@@ -590,7 +636,7 @@ def process_transaction():
 
         return redirect(url_for('success_screen', transaction_id=current_transaction_details['transaction_id']))
     else:
-        # Transaction declined by internal card check
+        # Transaction declined by ISO server
         flash(f"Payment {iso_response['status']}: {iso_response['message']}", "error")
         return redirect(url_for('reject_screen', transaction_id=current_transaction_details['transaction_id']))
 
@@ -600,7 +646,7 @@ def process_transaction():
 def success_screen():
     """Renders the success screen with transaction details."""
     transaction_id = request.args.get('transaction_id')
-    transaction = get_transaction_details_from_mock_db(transaction_id) # Use mock DB
+    transaction = get_transaction_details_from_firestore(transaction_id)
 
     if not transaction:
         flash('Transaction details not found.', 'error')
@@ -619,7 +665,7 @@ def success_screen():
 def reject_screen():
     """Renders the reject screen with transaction details."""
     transaction_id = request.args.get('transaction_id')
-    transaction = get_transaction_details_from_mock_db(transaction_id) # Use mock DB
+    transaction = get_transaction_details_from_firestore(transaction_id)
 
     if not transaction:
         flash('Transaction details not found.', 'error')
@@ -638,7 +684,7 @@ def reject_screen():
 def receipt(copy_type):
     """Renders the receipt based on transaction ID from mock DB and copy type."""
     transaction_id = request.args.get('transaction_id')
-    transaction = get_transaction_details_from_mock_db(transaction_id) # Use mock DB
+    transaction = get_transaction_details_from_firestore(transaction_id)
 
     if not transaction:
         flash('Receipt details not found.', 'error')
@@ -688,7 +734,7 @@ def receipt(copy_type):
 def transaction_history_screen():
     """Renders the transaction history screen."""
     transactions = []
-    # Fetch all documents from the in-memory database
+    # Fetch all documents from the mock in-memory database
     mock_docs = get_transactions_collection_ref().stream()
     for txn in mock_docs:
         if 'timestamp' in txn:
@@ -700,10 +746,7 @@ def transaction_history_screen():
         else:
             txn['card_number_masked'] = "N/A"
         transactions.append(txn)
-    
-    # Sort transactions by timestamp in reverse order (most recent first)
-    transactions.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
-    logger.info(f"MOCK DB: Fetched and sorted {len(transactions)} transactions for history.")
+    logger.info(f"Mock DB: Fetched {len(transactions)} transactions for history.")
 
     return render_template('transaction_history.html', transactions=transactions)
 
@@ -715,4 +758,4 @@ get_user_data()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False) # Set debug=True for development
+    app.run(host='0.0.0.0', port=port, debug=True) # Set debug=True for development
