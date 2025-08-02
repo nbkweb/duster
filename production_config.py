@@ -14,16 +14,16 @@ def get_production_config():
         'DEFAULT_TRC20_WALLET': os.environ.get('DEFAULT_TRC20_WALLET', 'TEti1NerM8dg14cGpxa1eCzYzShPVFTBfs'),
 
         # Blockchain API Keys
-        'INFURA_PROJECT_ID': os.environ.get('INFURA_PROJECT_ID', '6aaea4c2d2be42bf89c660d07863fea5'),
-        'TRONGRID_API_KEY': os.environ.get('TRONGRID_API_KEY', '90556144-eb12-4d28-be5f-24368bb813ff'),
+        # These should default to generic placeholders if environment variables are not set.
+        # Your actual keys MUST be set as environment variables in Render.
+        'INFURA_PROJECT_ID': os.environ.get('INFURA_PROJECT_ID', 'YOUR_INFURA_PROJECT_ID_HERE'),
+        'TRONGRID_API_KEY': os.environ.get('TRONGRID_API_KEY', 'YOUR_TRONGRID_API_KEY_HERE'),
 
         # Sender Wallet Private Keys (HIGHLY SENSITIVE - NEVER HARDCODE IN PRODUCTION!)
         # These values MUST be set as environment variables in your deployment.
-        # SENDER_ERC20_PRIVATE_KEY is the preferred and canonical key name.
-        # It will fall back to ERC20_PRIVATE_KEY if SENDER_ERC20_PRIVATE_KEY is not set in env.
-        'SENDER_ERC20_PRIVATE_KEY': os.environ.get('SENDER_ERC20_PRIVATE_KEY', os.environ.get('ERC20_PRIVATE_KEY', '6b3a7d490a4cf46d8219c155316a947823e9fe7fa43eb42342a83fd7fb3cba9b')), # Placeholder
-        # SENDER_TRC20_PRIVATE_KEY will fall back to TRC20_PRIVATE_KEY if not set.
-        'SENDER_TRC20_PRIVATE_KEY': os.environ.get('SENDER_TRC20_PRIVATE_KEY', os.environ.get('TRC20_PRIVATE_KEY', '3559ac98cc826107055a7937587a28d9889a6f3c40d8524a89f07e49ecbb7bbd')), # Placeholder
+        # The default values here should be the generic placeholders.
+        'SENDER_ERC20_PRIVATE_KEY': os.environ.get('SENDER_ERC20_PRIVATE_KEY', os.environ.get('ERC20_PRIVATE_KEY', '0x1111111111111111111111111111111111111111111111111111111111111111')), # Placeholder
+        'SENDER_TRC20_PRIVATE_KEY': os.environ.get('SENDER_TRC20_PRIVATE_KEY', os.environ.get('TRC20_PRIVATE_KEY', '1111111111111111111111111111111111111111111111111111111111111111')), # Placeholder
 
         # ISO 8583 Server Details - Aligned with EXTERNAL_ISO_HOST/PORT
         'ISO_SERVER_HOST': os.environ.get('EXTERNAL_ISO_HOST', '66.185.176.0'),
