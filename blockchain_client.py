@@ -1,6 +1,5 @@
 import logging
 from web3 import Web3
-from web3.middleware import geth_poa_middleware # Required for PoA networks like BSC, Polygon
 from tronpy import Tron
 from tronpy.keys import PrivateKey as TronPrivateKey
 from tronpy.providers import HTTPProvider as TronHTTPProvider
