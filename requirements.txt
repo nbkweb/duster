@@ -3,5 +3,4 @@ pyotp
 qrcode
 web3
 tronpy          # Updated to a newer version for broader Python compatibility
-pyiso8583       # Updated to a readily available version
 python-dotenv
