@@ -1,7 +1,7 @@
-        Flask==2.3.2
-        pyotp==2.9.0
-        qrcode==7.4.2
-        web3==7.12.1
-        tronpy==0.6.0
-        pyiso8583==1.1.0
-        python-dotenv==1.1.1
+Flask==2.3.2
+pyotp==2.9.0
+qrcode==7.4.2
+web3==7.12.1
+tronpy==0.7.0          # Updated to a newer version for broader Python compatibility
+pyiso8583==3.0.0       # Updated to a readily available version
+python-dotenv==1.1.1
